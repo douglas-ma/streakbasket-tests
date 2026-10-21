@@ -15,7 +15,7 @@ public final class BrowserFactory {
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--window-size=1440,1000", "--lang=pt-BR");
         options.setExperimentalOption("prefs", Map.of("intl.accept_languages", "pt-BR,pt"));
-        if (Boolean.parseBoolean(System.getProperty("headless", "true"))) {
+        if (Boolean.parseBoolean(System.getProperty("headless", "false"))) {
             options.addArguments("--headless=new");
         }
 
