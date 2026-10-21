@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import com.streakbasket.tests.support.Contexto;
 import io.cucumber.java.After;
+import io.cucumber.java.AfterStep;
 import io.cucumber.java.Before;
 import io.cucumber.java.Scenario;
 import org.openqa.selenium.OutputType;
@@ -21,6 +22,14 @@ public class Hooks {
         this.contexto = contexto;
     }
 
+    @AfterStep // adicionado para que consigamos observar os testes com mais calma!
+    public void pausaParaApresentacao() {
+        try {
+            Thread.sleep(1500);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
     @Before
     public void iniciarNavegador() {
         contexto.iniciarNavegador();
