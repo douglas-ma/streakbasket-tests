@@ -1,44 +1,31 @@
 package com.streakbasket.tests.pages;
 
-import java.time.Duration;
-
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.WebDriverWait;
 
-public class StreakBasketPage {
-    private static final By MODAL = By.cssSelector("[role='dialog'][aria-modal='true']");
+public class StreakBasketPage extends BasePage {
     private static final By ESCOLHER_MODO = botaoComTexto("ESCOLHER MODO");
     private static final By EMAIL = By.cssSelector("input[aria-label='E-mail da conta']");
     private static final By SENHA = By.cssSelector("input[aria-label='Senha da conta']");
 
-    private final WebDriver driver;
-    private final WebDriverWait wait;
-
     public StreakBasketPage(WebDriver driver) {
-        this.driver = driver;
-        this.wait = new WebDriverWait(driver,
-                Duration.ofSeconds(Long.getLong("timeout.seconds", 20L)));
+        super(driver);
     }
 
     public void abrir() {
-        driver.get(System.getProperty("base.url", "https://streakbasket.vercel.app"));
+        driver.get(baseUrl());
         wait.until(ExpectedConditions.visibilityOfElementLocated(ESCOLHER_MODO));
+    }
+
+    public void recarregar() {
+        driver.navigate().refresh();
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("button[aria-label]")));
     }
 
     public String titulo() {
         return driver.getTitle();
-    }
-
-    public boolean textoVisivel(String texto) {
-        return wait.until(ExpectedConditions.visibilityOfElementLocated(
-                By.xpath("//*[normalize-space(text())='" + texto + "']"))).isDisplayed();
-    }
-
-    public boolean botaoVisivel(String texto) {
-        return wait.until(ExpectedConditions.visibilityOfElementLocated(botaoComTexto(texto))).isDisplayed();
     }
 
     public void abrirInstrucoes() {
@@ -58,6 +45,10 @@ public class StreakBasketPage {
 
     public boolean modalFechado() {
         return driver.findElements(MODAL).stream().noneMatch(WebElement::isDisplayed);
+    }
+
+    public void aguardarModalFechado() {
+        wait.until(d -> modalFechado());
     }
 
     public void escolherModo(String modo) {
@@ -91,12 +82,17 @@ public class StreakBasketPage {
                 By.cssSelector("button[aria-label='Atualizar ranking geral']")));
     }
 
-    private void clicar(By seletor) {
-        wait.until(ExpectedConditions.elementToBeClickable(seletor)).click();
+    public void abrirMeuRanking() {
+        clicar(botaoComTexto("MEU RANKING"));
+        aguardarTextoNoModal("Campanhas salvas por modo de jogo");
     }
 
-    private static By botaoComTexto(String texto) {
-        return By.xpath("//button[normalize-space(.)='" + texto
-                + "' or .//*[normalize-space(text())='" + texto + "']]");
+    public void abrirSobre() {
+        clicar(By.cssSelector("button[aria-label='Sobre o projeto']"));
+        aguardarTextoNoModal("SOBRE O PROJETO");
+    }
+
+    public boolean linkVisivel(String rotulo) {
+        return visivel(By.cssSelector("[role='link'][aria-label='" + rotulo + "']")).isDisplayed();
     }
 }

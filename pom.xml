@@ -51,6 +51,14 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Injeta o mesmo Contexto (navegador e páginas) em hooks e classes de passos. -->
+        <dependency>
+            <groupId>io.cucumber</groupId>
+            <artifactId>cucumber-picocontainer</artifactId>
+            <version>${cucumber.version}</version>
+            <scope>test</scope>
+        </dependency>
+
         <dependency>
             <groupId>io.cucumber</groupId>
             <artifactId>cucumber-junit-platform-engine</artifactId>

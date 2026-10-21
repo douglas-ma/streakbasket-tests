@@ -1,4 +1,4 @@
-# Testes básicos do StreakBasket
+# Testes de interface do StreakBasket
 
 Exemplos de testes de interface para <https://streakbasket.vercel.app>, usando **Java 21, Maven, Selenium WebDriver, Cucumber e Gherkin em português**.
 
@@ -13,7 +13,7 @@ O Spring Boot já fazia parte do projeto. Os cenários do site não precisam sub
 
 ## Pré-requisitos
 
-- **JDK 21**, com `JAVA_HOME` apontando para essa instalação.
+- **JDK 21 ou mais recente**, com `JAVA_HOME` apontando para essa instalação. O código é compilado para Java 21; a suíte também foi executada com JDK 27.
 - Google Chrome instalado.
 - Internet para acessar o site e, na primeira execução, baixar Maven, dependências e ChromeDriver.
 
@@ -71,23 +71,40 @@ O dry-run não valida o funcionamento do site. Para isso, execute os testes norm
 
 No Linux/macOS, use `./mvnw` no lugar de `./mvnw.cmd`.
 
+Os exemplos acima são para o **PowerShell**, onde as aspas simples evitam que `-D...=...` seja interpretado. No **Prompt de Comando (cmd.exe)** as aspas simples não funcionam: o Maven recebe o texto com as aspas e falha com `Unknown lifecycle phase "'-Dheadless=false'"`. No cmd, use aspas duplas ou nenhuma:
+
+```bat
+mvnw.cmd test -Dheadless=false
+mvnw.cmd test -Dtest=CucumberTest "-Dcucumber.filter.tags=@draft and not @e2e"
+```
+
 ## Cenários incluídos
 
-| Tag | Comportamento verificado |
-| --- | --- |
-| `@inicio` | Título, marca e botões principais da página inicial |
-| `@ajuda` | Abertura das instruções e conteúdo das três etapas do jogo |
-| `@ajuda` | Fechamento das instruções pelo botão ENTENDI |
-| `@modos` | Preparação do Modo Streak com cinco posições vazias |
-| `@modos` | Preparação da Temporada NBA com cinco posições vazias |
-| `@perfil` | Formulário com e-mail e senha vazios, e senha do tipo `password` |
-| `@ranking` | Painel do ranking e opções de modo e dificuldade |
+Os cenários estão em `src/test/resources/features/`, um arquivo por área do site. Cada linha de `Exemplos` de um `Esquema do Cenário` é uma execução separada.
 
-São **sete execuções de cenários**: o `Esquema do Cenário` é executado uma vez por linha da tabela `Exemplos`. Todos também têm a tag `@smoke`.
+| Arquivo / tag | Comportamento verificado | Execuções |
+| --- | --- | --- |
+| `streakbasket.feature` · `@smoke` | Página inicial, instruções, preparação dos modos Streak e Temporada NBA, formulário de perfil e ranking geral | 7 |
+| `ajustes.feature` · `@ajustes` | Tema escuro, tema mantido após recarregar, volta ao claro; tradução para EN e ES e volta ao PT | 6 |
+| `informacoes.feature` · `@informacoes` | Janela "Sobre o projeto" (autor e links) e fechamento; "Meu ranking" vazio em cada modo e fechamento | 6 |
+| `draft.feature` · `@draft` | Botão de busca bloqueado até escolher modo e dificuldade; destaque da opção escolhida; sorteio da franquia; "Sortear outro time" gasta um sorteio; escalação do primeiro jogador | 9 |
+| `draft.feature` · `@e2e` | Fluxo completo: monta o quinteto, busca adversário, simula a partida e confere o placar dos quatro quartos | 1 |
+| `desafio-diario.feature` · `@desafio-diario` | 1 jogador revelado e 4 ocultos; palpite vazio não gasta tentativa; sugestões de franquia ao digitar; limite de 4 dígitos na temporada; estatísticas do jogador revelado; regras do desafio | 8 |
+| `multiplayer.feature` · `@multiplayer` | Campos de nome e código; configuração padrão da sala; troca de cada opção da sala; volta às opções | 9 |
+| `franquias.feature` · `@franquias` | Catálogo `/teams`; navegação franquia → temporada → elenco; elenco acessado direto pelo endereço; estatísticas de um jogador; trilha de navegação | 6 |
+| `perfil.feature` · `@perfil` | Mensagens de validação ao entrar e ao criar conta; troca de aba; fechamento do perfil | 7 |
 
-Validação realizada no site com JDK 21 e Chrome headless: **7 cenários Cucumber passaram**. Incluindo o teste Spring original, o Maven terminou com **8 testes, 0 falhas e 0 erros**. A correspondência dos passos também foi conferida com dry-run.
+Para rodar uma área, filtre pela tag, por exemplo `'-Dcucumber.filter.tags=@draft and not @e2e'`.
 
-O teste de perfil apenas abre e verifica o formulário. Os exemplos não enviam credenciais nem criam contas, salas ou partidas no servidor. Os testes de modo param na preparação do draft, antes da busca de franquias. O ranking verifica a interface; não verifica os resultados retornados pelo backend.
+Validação realizada no site em 21/10/2026, com JDK 27 e Chrome 155 headless: **59 cenários Cucumber passaram** (cerca de 9 minutos). Incluindo o teste Spring original, o Maven terminou com **60 testes, 0 falhas e 0 erros**.
+
+### O que os testes enviam ao servidor
+
+- **Perfil:** só senhas com menos de 6 caracteres (8 para criar conta), que o próprio formulário recusa antes de enviar. Um e-mail malformado com senha longa, como `jogador@` / `123456`, passa pela validação local e vai para a autenticação; por isso não entra nos exemplos.
+- **Desafio diário:** nenhum palpite é confirmado, para não gastar as tentativas do dia. O cenário "palpite vazio" verifica justamente que nada é registrado.
+- **Multiplayer:** nenhuma sala é criada nem procurada; os cenários param antes de "CRIAR SALA".
+- **Draft e simulação:** rodam no navegador; o progresso fica no `localStorage` do perfil temporário, descartado ao fim de cada cenário. O cenário `@e2e` depende de sorteios aleatórios e leva cerca de 40 s.
+- **Rankings:** a interface é verificada, não os resultados vindos do backend.
 
 ## Arquivos principais
 
@@ -96,15 +113,37 @@ src/test/
 ├── java/com/streakbasket/tests/
 │   ├── CucumberTest.java                 # Suíte JUnit que descobre o Gherkin
 │   ├── TestsApplicationTests.java        # Teste Spring original
-│   ├── pages/StreakBasketPage.java       # Seletores, cliques e esperas Selenium
-│   ├── steps/StreakBasketSteps.java      # Passos Gherkin, hooks e assertivas
-│   └── support/BrowserFactory.java       # Criação e configuração do Chrome
+│   ├── pages/                            # Page Objects: seletores, cliques e esperas Selenium
+│   │   ├── BasePage.java                 # Esperas, janelas, grupos de opções e seletores comuns
+│   │   ├── StreakBasketPage.java         # Página inicial, instruções, ranking, perfil e "Sobre"
+│   │   ├── AjustesPage.java              # Tema e idioma
+│   │   ├── DraftPage.java                # Sorteio, escalação e simulação do Modo Streak
+│   │   ├── DesafioDiarioPage.java        # Desafio diário
+│   │   ├── MultiplayerPage.java          # Entrada e criação de sala
+│   │   ├── FranquiasPage.java            # Guia de elencos (/teams)
+│   │   └── PerfilPage.java               # Validação do formulário de acesso
+│   ├── steps/                            # Passos Gherkin e assertivas, um arquivo por área
+│   │   ├── Hooks.java                    # Abre e fecha o Chrome; captura de tela nas falhas
+│   │   ├── ComunsSteps.java              # Textos, janelas, endereço e opções selecionadas
+│   │   └── ...Steps.java
+│   └── support/
+│       ├── BrowserFactory.java           # Criação e configuração do Chrome
+│       └── Contexto.java                 # Navegador e páginas do cenário (PicoContainer)
 └── resources/
-    ├── features/streakbasket.feature     # Cenários em português
+    ├── features/*.feature                # Cenários em português
     └── junit-platform.properties        # Relatórios e execução do Cucumber
 ```
 
-Os seletores priorizam `aria-label`, texto dos botões e o papel `dialog`; evitam as classes CSS geradas pelo site. As esperas são explícitas (`WebDriverWait`), sem `Thread.sleep`. Cada cenário abre um Chrome com perfil temporário e o fecha ao terminar, isolando idioma, login e progresso entre testes. O navegador solicita português do Brasil para estabilizar os textos verificados.
+Os seletores priorizam `aria-label`, texto dos botões e o papel `dialog`; evitam as classes CSS geradas pelo site. As esperas são explícitas (`WebDriverWait`), sem `Thread.sleep`. Cada cenário abre um Chrome com perfil temporário e o fecha ao terminar, isolando idioma, tema, login e progresso entre testes. O navegador solicita português do Brasil para estabilizar os textos verificados.
+
+O `cucumber-picocontainer` cria um `Contexto` por cenário e o entrega pelo construtor a `Hooks` e a todas as classes de passos. Assim, passos de arquivos diferentes usam o mesmo navegador.
+
+Detalhes do site que os Page Objects tratam:
+
+- O site é feito com React Native Web. As telas internas (draft, desafio, multiplayer) também são `role="dialog"`; por isso `BasePage.ultimoModal()` usa a janela visível aberta por último.
+- Alguns controles são `div[tabindex="0"]` e não `button` (`INICIAR PARTIDA`, `BUSCAR ADVERSÁRIO`, `Sortear Outro Time`); `controleComTexto` os localiza.
+- A opção escolhida em um grupo (modo, dificuldade, número de jogadores...) só é indicada pela cor de fundo. `opcoesSelecionadas` compara cada opção com o fundo neutro dos botões do cabeçalho, sem fixar cores no código.
+- O draft sorteia franquias aleatórias. Os passos não esperam um time específico: escalam o jogador que couber em uma posição vazia.
 
 ## Relatórios
 
@@ -134,9 +173,9 @@ Exemplo de espera maior:
 
 ## Adicionar um cenário
 
-1. Acrescente o comportamento em `streakbasket.feature`.
-2. Reaproveite os passos existentes ou crie métodos anotados com `@Dado`, `@Quando` e `@Entao` em `StreakBasketSteps`.
-3. Coloque novos seletores e ações em `StreakBasketPage`.
+1. Acrescente o comportamento no `.feature` da área (ou crie um novo em `src/test/resources/features/`).
+2. Reaproveite os passos existentes (veja `ComunsSteps`) ou crie métodos anotados com `@Dado`, `@Quando` e `@Entao` na classe de passos da área. Classes novas recebem o `Contexto` pelo construtor.
+3. Coloque novos seletores e ações no Page Object da tela, estendendo `BasePage`; obtenha-o com `contexto.pagina(MinhaPage.class)`.
 4. No passo `Então`, compare o resultado observado com o esperado usando as assertivas do JUnit.
 5. Execute o cenário e confira o relatório. Mudanças no texto, idioma ou estrutura do site podem exigir atualização dos seletores e das expectativas.
 
